@@ -1,0 +1,45 @@
+<script src="Vertebrae.js"></script>
+<script>
+window.onload = function() {
+
+//main view
+TodoView = Vertebrae.View.extend({
+	template: [
+		{id: "list", className: "list"},
+		{tag: "label", children: [
+			{id: "text", tag: "input", type: "text"}
+		]},
+
+		{id: "submit", tag: "button", text: "Add to list"}
+	],
+	
+	_items: [],
+
+	fill: function (collection) {
+		for (var i = 0; i < collection.length; ++i) {
+			var item = collection[i];
+			this._items.push(
+				new ItemView(item)
+			);
+		}
+	}
+});
+
+//view for individual items
+ItemView = Vertebrae.View.extend({
+	template: [
+		{id: "text", tag: "span"},
+		{id: "check", tag: "input", type: "checkbox"}
+	]
+});
+
+todo = new TodoView();
+
+//fill the list with localStorage data
+if (localStorage.todo)
+	todo.fill(localStorage.todo);
+else
+	localStorage.todo = [];
+
+};
+</script>

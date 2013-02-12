@@ -42,45 +42,7 @@ function merge () {
 * this class to build your DOM structure in JSON, assign
 * event handlers and communicate with the server.
 */
-var View = function(opts) {
-	//pass in the parent view through options
-	this.parent = opts.parent;
-	this.children = [];
-
-	this._formProps = {};
-	this._handlers = {};
-
-	//DOM parent fragment
-	this.el = document.createDocumentFragment();
-	this.renderTemplate(this.el);
-	
-	//keep a reference to this class
-	var self = this;
-
-	//attach any event handlers
-	if (this.events && typeof this.events === "object") {
-		for (var on in this.events) {
-			var parsed = on.split(" ");
-			var cb = this[this.events[on]];
-			
-			//ensure correct format and element exists
-			if (parsed.length !== 2 || !this[parsed[1]])
-				continue;
-
-			//add a 2nd level evt handler in a closure
-			(function (parsed, cb) {
-				this[parsed[1]]["on" + parsed[0]] = function () {
-					cb && cb.apply(self, arguments);
-				};	
-			}).call(this, parsed, cb);
-		}
-	}
-
-	//execute render after initialisation
-	setTimeout(function() {
-		self.render && self.render.call(self);
-	}, 0);
-};
+var View = function() {};
 
 /**
 * Static method to turn a JSON template into a DOM structure.
@@ -137,26 +99,132 @@ View.prototype = {
 	*/
 	renderTemplate: function (parent) {
 		var tpl = this.template;
-
+		var container = document.createElement("div");
+		container.setAttribute("class", "container");
+		
 		for (var i = 0; i < tpl.length; ++i) {
-			View.toDOM(this, tpl[i], parent);
+			View.toDOM(this, tpl[i], container);
 		}
+
+		parent.appendChild(container);
+		this.container = container;
 	},
 
 	/**
 	* Default methods
 	*/
 	render: function () {},
-	init: function () {},
+	init: function (opts) {
+		opts = opts || {};
+
+		//pass in the parent view through options
+		this.parent = opts.parent;
+		this.superview = opts.superview || (this.parent && this.parent.el);
+		this.children = [];
+
+		this._formProps = {};
+		this._handlers = {};
+		this.model = {};
+
+		//DOM parent fragment
+		this.el = document.createDocumentFragment();
+		this.renderTemplate(this.el);
+		
+		//keep a reference to this class
+		var self = this;
+
+		//copy items from opts into the model
+		for (var item in this.defaults) {
+			if (item in opts) {
+				this.model[item] = opts[item];
+				delete opts[item];
+			} else {
+				this.model[item] = this.defaults[item];
+			}
+		}
+
+		//attach any event handlers
+		if (typeof this.events === "object") {
+			for (var on in this.events) {
+				var parsed = on.split(" ");
+				var cb = this[this.events[on]];
+				
+				//ensure correct format and element exists
+				if (parsed.length !== 2 || !this[parsed[1]])
+					continue;
+
+				//add a 2nd level evt handler in a closure
+				(function (parsed, cb) {
+					this[parsed[1]]["on" + parsed[0]] = function (e) {
+						//simple IE fix
+						e = e || window.event;
+
+						cb && cb.call(self, e);
+						self.emit("input:" + parsed[0], e, self);
+					};
+				}).call(this, parsed, cb);
+			}
+		}
+
+		//execute render after initialisation
+		setTimeout(function() {
+			self.render && self.render.call(self);
+			self.superview && self.superview.appendChild(self.el);
+		}, 0);
+	},
 
 	/**
 	* Heirarchy methods
 	*/
-	add: function (name, child) {
-		this[name] = child;
+	addChild: function (child) {
 		child.parent = this;
 		this.children.push(child);
+		this.emit("ChildAdded");
+		child.emit("ParentAdded");
 	},
+
+	removeFromParent: function () {
+		var children = this.parent.children;
+		for (var i = children.length - 1; i >= 0; --i) {
+			if (children[i] === this) {
+				children.splice(i, 1);
+				break;
+			}
+		}
+
+		this.superview.removeChild(this.container);
+		this.parent.emit("ChildRemoved", this);
+		this.emit("ParentRemoved", parent);
+
+		//TODO: see how DocumentFragment works so it can be removed
+	},
+
+	/**
+	* Recursively generate a new object containing
+	* the models of the views.
+	*/
+	getModel: function () {
+		var model = merge({}, this.model);
+
+		//serialize all children if they exist		
+		if (this.children.length) {
+			model.children = [];
+
+			for (var i = 0; i < this.children.length; ++i) {
+				model.children.push(
+					this.children[i].getModel()
+				);
+			}
+		}
+
+		return model;
+	},
+
+	serialize: function () {
+		return JSON.stringify(this.getModel());
+	},
+
+	unserialize: function () {},
 
 	/**
 	* Event methods
@@ -255,21 +323,16 @@ function createExtend (parent) {
 		cls.prototype.constructor = cls;
 
 		//give access to the parent class
-		cls.prototype.super = parent;
+		cls.prototype.super = function (method, args) {
+			parent.prototype[method].apply(this, args);
+		};
 
 		//give an extend function to this class
 		cls.extend = createExtend(cls);
 
 		//extend the class with these options
 		for (var key in opts)
-			cls.prototype[key] = opts[key]
-
-		//give the class these properties if not defined already
-		/** (this should be done for us by extending prototype)
-		for (var key in parent.prototype)
-			if (!cls.prototype[key])
-				cls.prototype[key] = parent.prototype[key];
-		*/
+			cls.prototype[key] = opts[key];
 
 		return cls;
 	};

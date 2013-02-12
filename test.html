@@ -1,9 +1,30 @@
+<html>
+<head>
+<style>
+.done { text-decoration: line-through; color: #aaa; }
+</style>
+</head>
+<body>
+<div id="container"></div>
+
 <script src="Vertebrae.js"></script>
 <script>
-window.onload = function() {
 
 //main view
 TodoView = Vertebrae.View.extend({
+	init: function (opts) {
+		this.super('init', arguments);
+
+		function updateStorage () {
+			opts.storage.todo = this.serialize();
+		}
+
+		//serialize the model to localStorage
+		this.on("ChildAdded", updateStorage);
+		this.on("ChildRemoved", updateStorage);
+		this.on("input:change", updateStorage);
+	},
+
 	template: [
 		{id: "list", className: "list"},
 		{tag: "label", children: [
@@ -15,31 +36,79 @@ TodoView = Vertebrae.View.extend({
 	
 	_items: [],
 
-	fill: function (collection) {
-		for (var i = 0; i < collection.length; ++i) {
-			var item = collection[i];
-			this._items.push(
-				new ItemView(item)
-			);
+	events: {
+		'click submit': '_add'
+	},
+
+	_add: function () {
+		console.log("ADD", this.text.value)
+		this.addChild(new ItemView({
+			text: this.text.value,
+			superview: this.list
+		}));
+
+		this.text.value = ""; //clear textbox
+	},
+
+	unserialize: function (blob) {
+		var data = JSON.parse(blob);
+		for (var i = 0; i < data.children.length; ++i) {
+			this.addChild(new ItemView({
+				text: data.children[i].text,
+				done: data.children[i].done,
+				superview: this.list
+			}));
 		}
 	}
 });
 
 //view for individual items
 ItemView = Vertebrae.View.extend({
+	//this will form the model object
+	defaults: {
+		"text": "", 
+		"done": false
+	},
+
 	template: [
-		{id: "text", tag: "span"},
-		{id: "check", tag: "input", type: "checkbox"}
-	]
+		{className: "row", children: [
+			{id: "text", tag: "span"},
+			{id: "check", tag: "input", type: "checkbox"},
+			{id: "remove", tag: "a", text: "[delete]"}
+		]}
+	],
+
+	events: {
+		"change check": "select",
+		"click remove": "_remove"
+	},
+
+	select: function (e) {
+		this.model.done = this.check.checked;
+		this.render();
+	},
+
+	_remove: function () {
+		this.removeFromParent();
+	},
+
+	render: function () {
+		this.text.innerText = this.model.text;
+		this.text.className = this.model.done ? "done" : "";
+		this.check.checked = this.model.done;
+	}
 });
 
-todo = new TodoView();
+todo = new TodoView({
+	storage: localStorage || {}
+});
 
-//fill the list with localStorage data
 if (localStorage.todo)
-	todo.fill(localStorage.todo);
-else
-	localStorage.todo = [];
+	todo.unserialize(localStorage.todo);
 
-};
+
+console.log(todo)
+document.getElementById("container").appendChild(todo.el);
 </script>
+</body>
+</html>

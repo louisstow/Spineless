@@ -1,0 +1,20 @@
+# General thoughts and Ideas
+
+Would be good to have generalised events. For example a Change event whenever
+the model changes or the heirarchy is modified.
+
+this.on("Change");
+
+When to validate Views?
+	- sync --Before sending to server
+	- addChild --Want child to validate before adding to tree.
+	- init? --May not have data yet.
+
+
+Flow:
+new View -> init() -> render()
+		          \. added to tree
+
+# Problems
+- Have to manually unserialize
+- Posting with ENTER key

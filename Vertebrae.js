@@ -3,14 +3,15 @@
 //create the global namespace
 var Vertebrae = win.Vertebrae = {};
 
-//list of attributes that require special logic
+//list of attributes that require special processing
 var blacklist = [
 	"id",
 	"tag",
 	"children",
 	"className",
 	"text",
-	"form"
+	"form",
+	"view"
 ];
 
 //unique number #TODO: use this for something
@@ -56,6 +57,18 @@ View.toDOM = function (ctx, obj, parent) {
 		parent = obj;
 		obj = ctx;
 		ctx = null;
+	}
+
+	//template is a view instead of DOM
+	if (obj.view) {
+		var view = new obj.view(obj);
+		view.superview = parent;
+		
+		if (ctx) {
+			ctx.addChild(view);
+		}
+
+		return view.el;
 	}
 
 	var el = document.createElement(obj.tag || "div");
@@ -169,6 +182,19 @@ View.prototype = {
 		//execute render after initialisation
 		setTimeout(function() {
 			self.render && self.render.call(self);
+
+			//check to see if there is a parent el
+			if (!self.superview && self.parent)
+				self.superview = self.parent.el;
+
+			if (typeof self.validate === "function") {
+				var err = self.validate();
+				if (err) {
+					self.emit("Error", err);
+					return err;
+				}
+			}
+
 			self.superview && self.superview.appendChild(self.el);
 		}, 0);
 	},
@@ -178,6 +204,7 @@ View.prototype = {
 	*/
 	addChild: function (child) {
 		child.parent = this;
+
 		this.children.push(child);
 		this.emit("ChildAdded");
 		child.emit("ParentAdded");
@@ -258,51 +285,16 @@ View.prototype = {
 	/**
 	* Network methods
 	*/
-	_formData: function () {
-		var data = {};
-		
-		for (var key in this.props) {
-			data[key] = this.props[key];
-		}
-
-		for (var key in this._formProps) {
-			data[key] = $(this._formProps[key]).val();
-		}
-
-		return data;
-	},
-
-	/**
-	* Override this for custom ajax
-	*/
 	sync: function(method, url, data) {
 		console.log(method, url, data);
-		var self = this;
-		api({
-			url: url,
-			method: method,
-			data: data,
-			success: function () {
-				self.success && self.success.apply(self, arguments);
-
-				//send the event up
-				self.emit(["success", method + ":success"], {
-					method: method,
-					url: url,
-					data: data
-				});
-			}
-		});
 	},
 
 	post: function () {
-		var data = this._formData();
-		this.sync("POST", this.url, data);
+		this.sync("POST", this.url, this.model);
 	},
 
 	delete: function () {
-		var data = this._formData();
-		this.sync("DELETE", this.url, data);
+		this.sync("DELETE", this.url, this.model);
 	}
 };
 

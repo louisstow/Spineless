@@ -1,0 +1,138 @@
+<html>
+<head>
+<style>
+body { font-size: 20px; font-family: sans-serif; }
+.done { text-decoration: line-through; color: #aaa; }
+.list div.container:nth-child(odd) {
+	background: #eee;
+}
+.row {
+	padding: 5px;
+}
+.row a {
+	font-size: 16px;
+	color: #0033FF;
+	cursor: pointer;
+	float: right;
+}
+#todo input.text { padding: 5px; font-size: 20px }
+#todo button { font-size: 20px }
+#todo { width: 250px }
+</style>
+</head>
+<body>
+<div id="todo"></div>
+
+<script src="Vertebrae.js"></script>
+<script>
+
+//main view
+TodoView = Vertebrae.View.extend({
+	init: function (opts) {
+		this.super('init', arguments);
+
+		function updateStorage () {
+			opts.storage.todo = this.serialize();
+		}
+
+		//serialize the model to localStorage
+		this.on("ChildAdded", updateStorage);
+		this.on("ChildRemoved", updateStorage);
+		this.on("input:change", updateStorage);
+
+		this.on("Error", function (err) {
+			console.error(err);
+		});
+	},
+
+	template: [
+		{id: "message", className: "message"},
+		{id: "list", className: "list"},
+		{id: "text", tag: "input", type: "text", className: "text"},
+		{id: "submit", tag: "button", text: "Add to list"}
+	],
+	
+	_items: [],
+
+	events: {
+		'click submit': '_add'
+	},
+
+	_add: function () {
+		this.addChild(new ItemView({
+			text: this.text.value,
+			superview: this.list
+		}));
+
+		this.text.value = ""; //clear textbox
+	},
+
+	//TODO: can this be automagic?
+	unserialize: function (blob) {
+		var data = JSON.parse(blob);
+		for (var i = 0; i < data.children.length; ++i) {
+			this.addChild(new ItemView({
+				text: data.children[i].text,
+				done: data.children[i].done,
+				superview: this.list
+			}));
+		}
+	}
+});
+
+//view for individual items
+ItemView = Vertebrae.View.extend({
+	//this will form the model object
+	defaults: {
+		"text": "", 
+		"done": false
+	},
+
+	validate: function () {
+		if (!this.model.text.length)
+			return "Text must not be empty";
+		
+	},
+
+	template: [
+		{className: "row", children: [
+			{id: "text", tag: "span"},
+			{id: "check", tag: "input", type: "checkbox"},
+			{id: "remove", tag: "a", text: "[delete]"}
+		]}
+	],
+
+	events: {
+		"change check": "select",
+		"click remove": "_remove"
+	},
+
+	select: function (e) {
+		this.model.done = this.check.checked;
+		this.render();
+	},
+
+	_remove: function () {
+		this.removeFromParent();
+	},
+
+	render: function () {
+		this.text.innerText = this.model.text;
+		this.text.className = this.model.done ? "done" : "";
+		this.check.checked = this.model.done;
+	}
+});
+
+todo = new TodoView({
+	storage: localStorage || {}
+});
+
+if (localStorage.todo)
+	todo.unserialize(localStorage.todo);
+
+
+console.log(todo)
+document.getElementById("todo").appendChild(todo.el);
+</script>
+</body>
+</html>

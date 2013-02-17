@@ -1,7 +1,7 @@
 ;(function (win, document) {
 
 //create the global namespace
-var Vertebrae = win.Vertebrae = {};
+var Spineless = win.Spineless = {};
 
 //list of attributes that require special processing
 var blacklist = [
@@ -39,7 +39,7 @@ function merge () {
 }
 
 /**
-* Vertebrae Views are the backbone of the framework. Use
+* Spineless Views are the backbone of the framework. Use
 * this class to build your DOM structure in JSON, assign
 * event handlers and communicate with the server.
 */
@@ -333,8 +333,8 @@ function createExtend (parent) {
 View.extend = createExtend(View);
 
 //assign the classes to the namespace
-Vertebrae.View = View;
-Vertebrae.merge = merge;
+Spineless.View = View;
+Spineless.merge = merge;
 
 
 })(window, window.document);

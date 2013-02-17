@@ -23,11 +23,11 @@ body { font-size: 20px; font-family: sans-serif; }
 <body>
 <div id="todo"></div>
 
-<script src="Vertebrae.js"></script>
+<script src="Spineless.js"></script>
 <script>
 
 //main view
-TodoView = Vertebrae.View.extend({
+TodoView = Spineless.View.extend({
 	init: function (opts) {
 		this.super('init', arguments);
 
@@ -81,7 +81,7 @@ TodoView = Vertebrae.View.extend({
 });
 
 //view for individual items
-ItemView = Vertebrae.View.extend({
+ItemView = Spineless.View.extend({
 	//this will form the model object
 	defaults: {
 		"text": "", 

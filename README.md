@@ -6,7 +6,7 @@ This project is my ideal front-end JavaScript library (like Backbone or Spine) b
 
 Every object in Spineless is a `View`. It contains some data (or a Model) and a DOM template. This template is converted to DOM nodes and appended to a DocumentFragment.
 
-**extend** `Spineless.View.extend(properties)`
+### **extend** `Spineless.View.extend(properties)`
 Create a custom view by providing instance properties.
 
 Setups up the prototype chain so you may can continue subclassing.
@@ -24,7 +24,7 @@ var DisabledButton = Button.extend({
 });
 ~~~
 
-**super** `view.super(method, arguments)`
+### **super** `view.super(method, arguments)`
 Execute a method on the parent class. Pass the method name
 and then an array of arguments to apply to the method. A simple
 trick is to use the [`arguments`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Functions_and_function_scope/arguments) object native to JavaScript functions.
@@ -40,7 +40,7 @@ var Button = Spineless.View.extend({
 });
 ~~~
 
-**el** `view.el`
+### **el** `view.el`
 Every view has a reference to a DOM element (whether inserted to the page or not). 
 When using a JSON template this is a [DocumentFragment](https://developer.mozilla.org/en-US/docs/DOM/document.createDocumentFragment). It can be inserted just like
 any other DOM node (such as [`appendChild`](https://developer.mozilla.org/en-US/docs/DOM/Node.appendChild)). If the template refers to an existing node,
@@ -51,7 +51,7 @@ var button = new Button();
 document.body.appendChild(button.el);
 ~~~
 
-**template** `view.template`
+### **template** `view.template`
 The heart of Views are templates represented as JSON and converted
 to a DOM tree. It accepts an array of objects where the object
 represents the node to create.
@@ -77,7 +77,7 @@ treated as attribute on the node.
 - **view -** use a `Spineless.View` instead of creating a DOM node. Every other property on the object will be passed into the view constructor.
 - **id -** will allow the node to be referenced through an instance property.
 
-**events** `view.events`
+### **events** `view.events`
 Shorthand way of assigning instance methods to an event callback 
 in the template tree.
 
@@ -95,7 +95,7 @@ The key is a notation to define first the event then the element in the
 template by `id` (seperated by a space). The value is a string representing 
 the method name in the class to trigger.
 
-**defaults** `view.defaults`
+### **defaults** `view.defaults`
 Use this object to define the properties for the `model` object of a view and
 their default values.
 
@@ -108,7 +108,7 @@ var Button = Spineless.View.extend({
 });
 ~~~
 
-**model** `view.model`
+### **model** `view.model`
 This is the only seperation of concerns in the library. It is how
 you access the instance model data. The values will be used to
 serialize the view as well as send its data to the server.

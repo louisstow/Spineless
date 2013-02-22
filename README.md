@@ -239,6 +239,37 @@ this.on({
 });
 ~~~
 
+### **off** `event.off(eventName, callback)` *alias: unbind, unsubscribe*
+Remove a bound callback from an event name. If no callback is specified,
+all events with that name will be remove. If neither callback or event name
+is specified, every event will be removed.
+
+~~~javascript
+//remove a specific callback on `change`
+this.off("change", this.onChange);
+
+//remove every callback on `change`
+this.off("change");
+
+//remove every event handler
+this.off();
+~~~
+
+### **emit** `event.emit(eventName[, args*])` *alias: trigger, publish`*
+Execute callbacks that are bound to this event name. Every subsequent argument
+will be passed into the callback function as arguments.
+
+~~~javascript
+//listen for the `ping` event
+this.on("ping", function (message) {
+	alert("Pong " + message);
+});
+
+//trigger the `ping` handler and pass in
+//the string "dong" as an argument.
+this.emit("ping", "dong");
+~~~
+
 ## Examples
 
 The following example will create a Button view class.

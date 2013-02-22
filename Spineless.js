@@ -51,78 +51,106 @@ function merge () {
 	return target;
 }
 
+//helper method to create extend functions on widgets
+function createExtend (parent) {
+	return function (opts) {
+		var cls = function () {
+			this.init && this.init.apply(this, arguments);
+		};
+
+		//we don't want to use the original constructor
+		//or else it will call `init`
+		function Dummy(){}
+  		Dummy.prototype = parent.prototype;
+
+		//extend the prototype with the widget
+		cls.prototype = new Dummy;
+		cls.prototype.constructor = cls;
+
+		//give access to the parent class
+		cls.super = function (ctx, method, args) {
+			parent.prototype[method].apply(ctx, args);
+		};
+
+		//give an extend function to this class
+		cls.extend = createExtend(cls);
+
+		//extend the class with these options
+		for (var key in opts)
+			cls.prototype[key] = opts[key];
+
+		return cls;
+	};
+}
+
+/**
+* Spineless Event emitter class.
+*/
+var Event = function () {
+	this.tag = "Event";
+	this.init && this.init.apply(this, arguments);
+};
+
+Event.prototype = {
+	init: function () {
+		this._handlers = {};
+	},
+
+	on: function (evt, cb) {
+		if (!this._handlers[evt])
+			this._handlers[evt] = [];
+
+		this._handlers[evt].push(cb);
+	},
+
+	off: function () {
+
+	},
+
+	emit: function (evt) {
+		//save all the arguments except the first one
+		var args = Array.prototype.slice.call(arguments, 1);
+		var node = this;
+		
+		do {
+			//execute the handlers
+			if (!node._handlers || !node._handlers[evt]) continue;
+
+			for (var i = 0; i < node._handlers[evt].length; ++i) {
+				//skip if the value is not executable
+				if (typeof node._handlers[evt][i] !== "function")
+					continue;
+
+				node._handlers[evt][i].apply(node, args);
+			}
+		} while (node = node.parent);
+	},
+
+	once: function () {
+
+	}
+};
+
+//setup event aliases
+Event.prototype.bind = Event.prototype.subscribe = Event.prototype.on;
+Event.prototype.unbind = Event.prototype.unsubscribe = Event.prototype.off;
+Event.prototype.trigger = Event.prototype.publish = Event.prototype.emit;
+
+Event.extend = createExtend(Event);
+
 /**
 * Spineless Views are the backbone of the framework. Use
 * this class to build your DOM structure in JSON, assign
 * event handlers and communicate with the server.
 */
-var View = function() {
-	this.init && this.init.apply(this, arguments);
-};
-
-/**
-* Static method to turn a JSON template into a DOM structure.
-* @param ctx - Instance object to save ID references to
-* @param obj - Template object to convert
-* @param parent - Append the element to this parent
-* @return HTMLElement
-*/
-View.toDOM = function (ctx, obj, parent) {
-	if (arguments.length < 3) {
-		parent = obj;
-		obj = ctx;
-		ctx = null;
-	}
-
-	//template is a view instead of DOM
-	if (obj.view) {
-		var view = new obj.view(obj);
-		view.superview = parent;
-		
-		if (ctx) {
-			ctx.addChild(view);
-		}
-
-		return view.el;
-	}
-
-	var el = document.createElement(obj.tag || "div");
-
-	for (var key in obj)
-		if (blacklist.indexOf(key) === -1)
-			el.setAttribute(key, obj[key]);
-
-	if (obj.className)
-		el.setAttribute("class", obj.className);
-
-	if ('text' in obj)
-		el.innerText = obj.text;
-
-	//render children
-	if (obj.children) {
-		for (var i = 0; i < obj.children.length; ++i) {
-			View.toDOM(ctx, obj.children[i], el);
-		}
-	}
-
-	//append to a parent if specified
-	if (parent) 
-		parent.appendChild(el);
-
-	if (ctx) {
-		//save a ref on the context
-		if (obj.id) ctx[obj.id] = el;
-	} 
-
-	return el;
-}
-
-View.prototype = {
+var View = Event.extend({
 
 	/**
 	* Default methods
 	*/
 	init: function (opts) {
+		View.super(this, "init", arguments);
+
 		opts = opts || {};
 
 		//pass in the parent view through options
@@ -130,9 +158,9 @@ View.prototype = {
 		this.superview = opts.superview || (this.parent && this.parent.el);
 		this.children = [];
 
-		this._formProps = {};
-		this._handlers = {};
+		//internal structures
 		this.model = {};
+		this.form = [];
 
 		//template exists in DOM, parse it
 		if (typeof this.template === "string") {
@@ -167,12 +195,14 @@ View.prototype = {
 				var cb = this[this.events[on]];
 				
 				//ensure correct format and element exists
-				if (parsed.length !== 2 || !this[parsed[1]])
+				if (parsed.length !== 2 || !this[parsed[1]]) 
 					continue;
 
 				this.attachEvent(parsed[1], parsed[0], cb);
 			}
 		}
+
+		this.on("change", this.render);
 
 		//execute render after initialisation
 		setTimeout(function() {
@@ -189,7 +219,7 @@ View.prototype = {
 	attachEvent: function (obj, evt, cb) {
 		var self = this;
 
-		//add a 2nd level evt handler in a closure
+		//add a 2nd level evt handler
 		this[obj]["on" + evt] = function (e) {
 			//simple IE fix
 			e = e || window.event;
@@ -258,6 +288,11 @@ View.prototype = {
 				} else {
 					this[id] = collection[i];
 				}
+
+				//add the node to the form array
+				if (INPUT_NODE.indexOf(collection[i].nodeName) !== -1) {
+					this.form.push(collection[i]);
+				}
 			}
 
 			//recurse the tree
@@ -271,45 +306,45 @@ View.prototype = {
 	* as the model should be bound
 	*/
 	_bindForms: function () {
-		var toCheck = [];
-		var self = this;
-
-		for (var key in this.model) {
-			//check to see if it exists in the view as an input node
-			if (this[key] && INPUT_NODE.indexOf(this[key].nodeName) !== -1) {
-				toCheck[key] = this[key];
+		
+		//callback to handle all changes
+		function handleChange () {
+			for (var i = 0; i < this.form.length; ++i) {
+				//mock the evt object
+				handleSingleChange({target: this.form[i]});
 			}
 		}
 
-		function handleChange () {
-			for (var key in toCheck) {
-				var input = toCheck[key];
-				var value = input.value;
+		//handle a change on a single form item
+		function handleSingleChange (evt) {
+			var input = evt.target;
+			var key = input.id || input.name;
+			var value;
 
-				if (input.type === "checkbox")
-					value = input.checked;
-				else if ('length' in input) {
-					console.log(input)
-					for (var i = 0; i < input.length; ++i)
-						if (input[i].checked) {
-							value = input[i].value;
-							break;
-						}
-				}
+			if (input.type === "checkbox") {
+				value = input.checked;
+			} else if (input.type === "radio") {
+				//only update the value if checked
+				if (input.checked)
+					value = input.value;
+			} else {
+				value = input.value;
+			}
 
+			//if value has actually been set
+			if (value !== undefined) {
+				if (this.model[key] !== value)
+					this.emit("change", key, value);
 
-				if (self.model[key] !== value)
-					self.emit("Changed", key, value);
-
-				self.model[key] = value;
+				this.model[key] = value;
 			}
 		}
 
 		if (DETECT.ON_INPUT) {
 			//if the new oninput event is supported, use that
-			for (var key in toCheck) {
-				toCheck[key].addEventListener("input", handleChange, false);
-				toCheck[key].addEventListener("change", handleChange, false);
+			for (var i = 0; i < this.form.length; ++i) {
+				this.form[i].addEventListener("input", handleSingleChange.bind(this), false);
+				this.form[i].addEventListener("change", handleSingleChange.bind(this), false);
 			}
 		} else {
 			//otherwise setup an interval to poll the value
@@ -351,35 +386,6 @@ View.prototype = {
 	unserialize: function () {},
 
 	/**
-	* Event methods
-	*/
-	emit: function (evt) {
-		//save all the arguments except the first one
-		var args = Array.prototype.slice.call(arguments, 1);
-		var node = this;
-		
-		do {
-			//execute the handlers
-			if (!node._handlers || !node._handlers[evt]) continue;
-
-			for (var i = 0; i < node._handlers[evt].length; ++i) {
-				//skip if the value is not executable
-				if (typeof node._handlers[evt][i] !== "function")
-					continue;
-
-				node._handlers[evt][i].apply(node, args);
-			}
-		} while (node = node.parent);
-	},
-
-	on: function (evt, cb) {
-		if (!this._handlers[evt])
-			this._handlers[evt] = [];
-
-		this._handlers[evt].push(cb);
-	},
-
-	/**
 	* Network methods
 	*/
 	sync: function(method, url, data) {
@@ -403,39 +409,71 @@ View.prototype = {
 
 	//shim functions
 	render: function () {}
-};
+});
 
-//helper method to create extend functions on widgets
-function createExtend (parent) {
-	return function(opts) {
-		var cls = function () {
-			this.init && this.init.apply(this, arguments);
-		};
+/**
+* Static method to turn a JSON template into a DOM structure.
+* @param ctx - Instance object to save ID references to
+* @param obj - Template object to convert
+* @param parent - Append the element to this parent
+* @return HTMLElement
+*/
+View.toDOM = function (ctx, obj, parent) {
+	if (arguments.length < 3) {
+		parent = obj;
+		obj = ctx;
+		ctx = null;
+	}
 
-		//we don't want to use the original constructor
-		//or else it will call `init`
-		function Dummy(){}
-  		Dummy.prototype = parent.prototype;
+	//template is a view instead of DOM
+	if (obj.view) {
+		var view = new obj.view(obj);
+		view.superview = parent;
+		
+		if (ctx) {
+			ctx.addChild(view);
+		}
 
-		//extend the prototype with the widget
-		cls.prototype = new Dummy;
-		cls.prototype.constructor = cls;
+		return view.el;
+	}
 
-		//give access to the parent class
-		cls.prototype.super = function (method, args) {
-			parent.prototype[method].apply(this, args);
-		};
+	var el = document.createElement(obj.tag || "div");
 
-		//give an extend function to this class
-		cls.extend = createExtend(cls);
+	for (var key in obj)
+		if (blacklist.indexOf(key) === -1)
+			el.setAttribute(key, obj[key]);
 
-		//extend the class with these options
-		for (var key in opts)
-			cls.prototype[key] = opts[key];
+	if (obj.className)
+		el.setAttribute("class", obj.className);
 
-		return cls;
-	};
+	if ('text' in obj)
+		el.innerText = obj.text;
+
+	//render children
+	if (obj.children) {
+		for (var i = 0; i < obj.children.length; ++i) {
+			View.toDOM(ctx, obj.children[i], el);
+		}
+	}
+
+	//append to a parent if specified
+	if (parent) 
+		parent.appendChild(el);
+
+	if (ctx) {
+		//save a ref on the context
+		if (obj.id) ctx[obj.id] = el;
+
+		//if an input node, save to forms array
+		if (INPUT_NODE.indexOf(obj.tag) !== -1) {
+			ctx.form.push(el);
+		}
+	} 
+
+	return el;
 }
+
+
 
 View.extend = createExtend(View);
 

@@ -2,6 +2,7 @@
 
 //create the global namespace
 var Spineless = win.Spineless = {};
+Spineless.$ = win.$;
 
 //list of attributes that require special processing
 var blacklist = [
@@ -13,6 +14,19 @@ var blacklist = [
 	"form",
 	"view"
 ];
+
+//list of input nodeName variations
+var INPUT_NODE = [
+	"INPUT",
+	"SELECT",
+	"TEXTAREA",
+	"BUTTON"
+];
+
+//feature detection constants
+var DETECT = {
+	ON_INPUT: (document.createElement("input").oninput === null)
+};
 
 //unique number #TODO: use this for something
 var UID = 0;
@@ -43,7 +57,9 @@ function merge () {
 * this class to build your DOM structure in JSON, assign
 * event handlers and communicate with the server.
 */
-var View = function() {};
+var View = function() {
+	this.init && this.init.apply(this, arguments);
+};
 
 /**
 * Static method to turn a JSON template into a DOM structure.
@@ -97,36 +113,16 @@ View.toDOM = function (ctx, obj, parent) {
 	if (ctx) {
 		//save a ref on the context
 		if (obj.id) ctx[obj.id] = el;
-
-		//save in a special form prop group
-		if (obj.form) 
-			ctx._formProps[obj.form] = el;
 	} 
 
 	return el;
 }
 
 View.prototype = {
-	/**
-	* Render methods
-	*/
-	renderTemplate: function (parent) {
-		var tpl = this.template;
-		var container = document.createElement("div");
-		container.setAttribute("class", "container");
-		
-		for (var i = 0; i < tpl.length; ++i) {
-			View.toDOM(this, tpl[i], container);
-		}
-
-		parent.appendChild(container);
-		this.container = container;
-	},
 
 	/**
 	* Default methods
 	*/
-	render: function () {},
 	init: function (opts) {
 		opts = opts || {};
 
@@ -139,9 +135,14 @@ View.prototype = {
 		this._handlers = {};
 		this.model = {};
 
-		//DOM parent fragment
-		this.el = document.createDocumentFragment();
-		this.renderTemplate(this.el);
+		//template exists in DOM, parse it
+		if (typeof this.template === "string") {
+			this.el = document.getElementById(this.template);
+			this.parseTemplate(this.el);
+		} else { //DOM parent fragment
+			this.el = document.createDocumentFragment();
+			this.renderTemplate(this.el);
+		}
 		
 		//keep a reference to this class
 		var self = this;
@@ -156,6 +157,10 @@ View.prototype = {
 			}
 		}
 
+		//bind forms to model
+		if (this.defaults)
+			this._bindForms();
+
 		//attach any event handlers
 		if (typeof this.events === "object") {
 			for (var on in this.events) {
@@ -166,16 +171,7 @@ View.prototype = {
 				if (parsed.length !== 2 || !this[parsed[1]])
 					continue;
 
-				//add a 2nd level evt handler in a closure
-				(function (parsed, cb) {
-					this[parsed[1]]["on" + parsed[0]] = function (e) {
-						//simple IE fix
-						e = e || window.event;
-
-						cb && cb.call(self, e);
-						self.emit("input:" + parsed[0], e, self);
-					};
-				}).call(this, parsed, cb);
+				this.attachEvent(parsed[1], parsed[0], cb);
 			}
 		}
 
@@ -187,16 +183,21 @@ View.prototype = {
 			if (!self.superview && self.parent)
 				self.superview = self.parent.el;
 
-			if (typeof self.validate === "function") {
-				var err = self.validate();
-				if (err) {
-					self.emit("Error", err);
-					return err;
-				}
-			}
-
 			self.superview && self.superview.appendChild(self.el);
 		}, 0);
+	},
+
+	attachEvent: function (obj, evt, cb) {
+		var self = this;
+
+		//add a 2nd level evt handler in a closure
+		this[obj]["on" + evt] = function (e) {
+			//simple IE fix
+			e = e || window.event;
+
+			self.emit("input:" + evt, e, self);
+			return cb && cb.call(self, e);
+		};
 	},
 
 	/**
@@ -222,8 +223,105 @@ View.prototype = {
 		this.superview.removeChild(this.container);
 		this.parent.emit("ChildRemoved", this);
 		this.emit("ParentRemoved", parent);
+	},
 
-		//TODO: see how DocumentFragment works so it can be removed
+	/**
+	* Render methods
+	*/
+	renderTemplate: function (parent) {
+		var tpl = this.template;
+		if (!tpl) return;
+
+		var container = document.createElement("div");
+		container.setAttribute("class", "container");
+		
+		for (var i = 0; i < tpl.length; ++i) {
+			View.toDOM(this, tpl[i], container);
+		}
+
+		parent.appendChild(container);
+		this.container = container;
+	},
+
+	parseTemplate: function (parent) {
+		var collection = parent.childNodes;
+		
+		for (var i = 0; i < collection.length; ++i) {
+			var id = collection[i].id || collection[i].name;
+
+			//if the property hasn't been taken, apply to class
+			if (id) {
+				//if it exists as a node, turn it into an array
+				if (this[id] && this[id].nodeName) {
+					this[id] = [ this[id], collection[i] ];
+				} else if (this[id] && 'length' in this[id]) {
+					this[id].push(collection[i]);
+				} else {
+					this[id] = collection[i];
+				}
+			}
+
+			//recurse the tree
+			if (collection[i].childNodes)
+				this.parseTemplate(collection[i]);
+		}
+	},
+
+	/**
+	* Any form elements with the same property
+	* as the model should be bound
+	*/
+	_bindForms: function () {
+		var toCheck = [];
+		var self = this;
+
+		for (var key in this.model) {
+			//check to see if it exists in the view as an input node
+			if (this[key] && INPUT_NODE.indexOf(this[key].nodeName) !== -1) {
+				toCheck[key] = this[key];
+			}
+		}
+
+		function handleChange () {
+			for (var key in toCheck) {
+				var input = toCheck[key];
+				var value = input.value;
+
+				if (input.type === "checkbox")
+					value = input.checked;
+				else if ('length' in input) {
+					console.log(input)
+					for (var i = 0; i < input.length; ++i)
+						if (input[i].checked) {
+							value = input[i].value;
+							break;
+						}
+				}
+
+
+				if (self.model[key] !== value)
+					self.emit("Changed", key, value);
+
+				self.model[key] = value;
+			}
+		}
+
+		if (DETECT.ON_INPUT) {
+			//if the new oninput event is supported, use that
+			for (var key in toCheck) {
+				toCheck[key].addEventListener("input", handleChange, false);
+				toCheck[key].addEventListener("change", handleChange, false);
+			}
+		} else {
+			//otherwise setup an interval to poll the value
+			this._interval = setInterval(handleChange, 300);
+		}
+	},
+
+	_unbindForms: function () {
+		//if we had to resort to interval
+		if (this._interval) 
+			clearInterval(this._interval);
 	},
 
 	/**
@@ -286,7 +384,14 @@ View.prototype = {
 	* Network methods
 	*/
 	sync: function(method, url, data) {
-		console.log(method, url, data);
+		if (typeof this.validate === "function") {
+			var err = this.validate();
+			if (err) {
+				return console.error(err);
+			}
+		}
+
+		console.log(method, url, JSON.stringify(data));
 	},
 
 	post: function () {
@@ -295,7 +400,10 @@ View.prototype = {
 
 	delete: function () {
 		this.sync("DELETE", this.url, this.model);
-	}
+	},
+
+	//shim functions
+	render: function () {}
 };
 
 //helper method to create extend functions on widgets
@@ -332,9 +440,35 @@ function createExtend (parent) {
 
 View.extend = createExtend(View);
 
+/**
+* Source url for retrieving data
+*/
+var Source = function(opts) {
+	var collection = new View;
+
+	Spineless.$.ajax({
+		url: opts.url,
+		dataType: 'json',
+		success: function (resp) {
+			for (var i = 0; i < resp.length; ++i) {
+				var view = new opts.view(resp[i]);
+				collection.addChild(view);
+			}
+
+			setTimeout(function () {
+				opts.success(collection)
+			}, 0);
+		}
+	});
+
+	return collection;
+};
+
+Source.extend = createExtend(Source);
+
 //assign the classes to the namespace
 Spineless.View = View;
 Spineless.merge = merge;
-
+Spineless.Source = Source;
 
 })(window, window.document);

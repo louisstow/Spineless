@@ -201,6 +201,44 @@ var UriEncoder = Spineless.View.extend({
 });
 ~~~
 
+## Spineless.Event
+
+At the root of every class is `Spineless.Event`. It manages emitting and
+listening to events throughout the instance. The methods here should be very
+familiar as the API is the same as [Backbone.js](http://documentcloud.github.com/backbone/#Events) and [Node.js](http://nodejs.org/api/events.html).
+
+### **on** `event.on(eventName, callback)` *alias: bind, subscribe*
+Bind a callback function to an event name. Colons are used
+as a convention to namespace event types (e.g. `change:textbox`). 
+
+*Note: This will only work with one level of namespacing.*
+
+An asterisk `*` can be used as a wildcard to listen to all
+events in a namespace.
+
+~~~javascript
+//listen to all change events
+this.on("change:*", function () { ... });
+//listen to a specific change event
+this.on("change:textbox", function () { ... });
+~~~
+
+To bind multiple events to a single callback, specify multiple
+event names delimeted by a space.
+
+~~~javascript
+this.on("change:textbox change:checkbox", ... );
+~~~
+
+An object can instead be passed to map event names to callback functions.
+
+~~~javascript
+this.on({
+	"change:textbox change:checkbox": this.update,
+	"dom:click": this.submit
+});
+~~~
+
 ## Examples
 
 The following example will create a Button view class.

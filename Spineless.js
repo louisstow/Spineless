@@ -11,7 +11,6 @@ var blacklist = [
 	"children",
 	"className",
 	"text",
-	"form",
 	"view"
 ];
 

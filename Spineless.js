@@ -55,7 +55,11 @@ function merge () {
 function createExtend (parent) {
 	return function (opts) {
 		var cls = function () {
-			this.init && this.init.apply(this, arguments);
+			if (this instanceof cls) {
+				this.init && this.init.apply(this, arguments);	
+			} else {
+				cls.super.apply(cls, arguments);
+			}
 		};
 
 		//we don't want to use the original constructor
@@ -103,8 +107,26 @@ Event.prototype = {
 		this._handlers[evt].push(cb);
 	},
 
-	off: function () {
+	off: function (evt, cb) {
+		//remove every handler
+		if (!evt && !cb) {
+			this._handlers = {};
+			return;
+		}
 
+		if (!cb) {
+			//remove every handler with that name
+			this._handlers[evt] = [];
+		} else {
+			var handlers = this._handlers[evt] || [];
+
+			//find the exact handler
+			for (var i = handlers.length; i >= 0; --i) {
+				if (handlers[i] === cb) {
+					handlers.splice(i, 1);
+				}
+			}
+		}
 	},
 
 	emit: function (evt) {
@@ -126,8 +148,11 @@ Event.prototype = {
 		} while (node = node.parent);
 	},
 
-	once: function () {
-
+	once: function (evt, cb) {
+		this.on(evt, function temp () {
+			cb && cb.apply(this, arguments);
+			this.off(evt, temp);
+		});
 	}
 };
 
@@ -149,8 +174,8 @@ var View = Event.extend({
 	* Default methods
 	*/
 	init: function (opts) {
-		View.super(this, "init", arguments);
-
+		View(this, "init", arguments);
+		console.log(this.constructor.name, this.constructor.toString())
 		opts = opts || {};
 
 		//pass in the parent view through options
@@ -504,6 +529,7 @@ var Source = function(opts) {
 Source.extend = createExtend(Source);
 
 //assign the classes to the namespace
+Spineless.Event = Event;
 Spineless.View = View;
 Spineless.merge = merge;
 Spineless.Source = Source;

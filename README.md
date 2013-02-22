@@ -95,12 +95,14 @@ There may be situations where the template already exists in the HTML page. You
 can point the template to the parent node by passing its `ID` attribute
 as a string.
 
-~~~javascript
+~~~html
 <a id="existingButton">
 	<img name="icon" />
 	<span name="label"></span>
 </a>
+~~~
 
+~~~javascript
 var Button = Spineless.View.extend({
 	template: "existingButton",
 	render: function () {

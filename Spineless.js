@@ -30,13 +30,17 @@ var DETECT = {
 //unique number #TODO: use this for something
 var UID = 0;
 
+//save reference to prototype methods
+var slice = Array.prototype.slice;
+var spaceRegex = /\s+/;
+
 /**
 * merge all object keys from the argument list
 * into one object and return it.
 */
 function merge () {
 	var target = {};
-	var args = Array.prototype.slice.call(arguments);
+	var args = slice.call(arguments);
 
 	//loop over all the arguments
 	for (var i = 0; i < args.length; ++i) {
@@ -101,17 +105,36 @@ Event.prototype = {
 	},
 
 	on: function (evt, cb) {
+		if (spaceRegex.test(evt)) {
+			//if delimetered by a space, call on
+			//for every event.
+			var evts = evt.split(spaceRegex);
+			for (var i = 0; i < evts.length; ++i)
+				this.on(evts[i], cb);
+
+			return this;
+		}
+
+		//define callbacks with an object
+		if (typeof evt === "object") {
+			//key is the event name, value is the
+			//callback function
+			for (var evtName in evt)
+				this.on(evtName, evt[evtName]);
+		}
+
 		if (!this._handlers[evt])
 			this._handlers[evt] = [];
 
 		this._handlers[evt].push(cb);
+		return this;
 	},
 
 	off: function (evt, cb) {
 		//remove every handler
 		if (!evt && !cb) {
 			this._handlers = {};
-			return;
+			return this;
 		}
 
 		if (!cb) {
@@ -127,12 +150,28 @@ Event.prototype = {
 				}
 			}
 		}
+
+		return this;
 	},
 
 	emit: function (evt) {
 		//save all the arguments except the first one
-		var args = Array.prototype.slice.call(arguments, 1);
+		var args = slice.call(arguments, 1);
 		var node = this;
+
+		//if there is a colon, emit wildcards
+		if (evt.indexOf(":") !== -1) {
+			var evtSplat = evt.split(":");
+			var wildcard = evtSplat[0] + ":*";
+			
+			//don't emit wildcard if already a wildcard
+			if (evtSplat[1] !== "*") {
+				var wildArgs = slice.call(arguments, 0);
+				wildArgs[0] = wildcard;
+				
+				this.emit.apply(this, wildArgs);
+			}
+		}
 		
 		do {
 			//execute the handlers
@@ -146,6 +185,8 @@ Event.prototype = {
 				node._handlers[evt][i].apply(node, args);
 			}
 		} while (node = node.parent);
+
+		return this;
 	},
 
 	once: function (evt, cb) {
@@ -153,6 +194,8 @@ Event.prototype = {
 			cb && cb.apply(this, arguments);
 			this.off(evt, temp);
 		});
+
+		return this;
 	}
 };
 
@@ -175,7 +218,6 @@ var View = Event.extend({
 	*/
 	init: function (opts) {
 		View(this, "init", arguments);
-		console.log(this.constructor.name, this.constructor.toString())
 		opts = opts || {};
 
 		//pass in the parent view through options
@@ -249,7 +291,7 @@ var View = Event.extend({
 			//simple IE fix
 			e = e || window.event;
 
-			self.emit("input:" + evt, e, self);
+			self.emit("dom:" + evt, e, self);
 			return cb && cb.call(self, e);
 		};
 	},
@@ -261,8 +303,8 @@ var View = Event.extend({
 		child.parent = this;
 
 		this.children.push(child);
-		this.emit("ChildAdded");
-		child.emit("ParentAdded");
+		this.emit("child:add", child);
+		child.emit("parent:add", this);
 	},
 
 	removeFromParent: function () {
@@ -275,8 +317,8 @@ var View = Event.extend({
 		}
 
 		this.superview.removeChild(this.container);
-		this.parent.emit("ChildRemoved", this);
-		this.emit("ParentRemoved", parent);
+		this.parent.emit("child:remove", this);
+		this.emit("parent:remove", parent);
 	},
 
 	/**
@@ -358,8 +400,11 @@ var View = Event.extend({
 
 			//if value has actually been set
 			if (value !== undefined) {
-				if (this.model[key] !== value)
+				//emit the change events
+				if (this.model[key] !== value) {
 					this.emit("change", key, value);
+					this.emit("change:"+key, value);
+				}
 
 				this.model[key] = value;
 			}

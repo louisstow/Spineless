@@ -24,9 +24,9 @@ var DisabledButton = Button.extend({
 });
 ~~~
 
-### **super** `view.super(method, arguments)`
-Execute a method on the parent class. Pass the method name
-and then an array of arguments to apply to the method. A simple
+### **super** `Spineless.View.super(context, method, arguments)` *alias: Constructor*
+Execute a method on the parent class. Pass the instance, the method name
+and an array of arguments to apply to the method. A simple
 trick is to use the [`arguments`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Functions_and_function_scope/arguments) object native to JavaScript functions.
 
 ~~~javascript
@@ -35,7 +35,21 @@ var Button = Spineless.View.extend({
 		//execute `init` on the View class
 		//with the same arguments passed into
 		//this constructor
-		this.super("init", arguments);
+		Spineless.View.super(this, "init", arguments);
+	}
+});
+~~~
+
+A shortcut is to invoke the constructor as a function. This is just an
+alias to super.
+
+~~~javascript
+var Button = Spineless.View.extend({
+	init: function () {
+		//execute `init` on the View class
+		//with the same arguments passed into
+		//this constructor
+		Spineless.View(this, "init", arguments);
 	}
 });
 ~~~

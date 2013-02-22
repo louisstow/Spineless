@@ -40,8 +40,8 @@ var Button = Spineless.View.extend({
 });
 ~~~
 
-A shortcut is to invoke the constructor as a function. This is just an
-alias to super.
+A shortcut is to invoke the constructor as a function. This is an
+alias to `super`.
 
 ~~~javascript
 var Button = Spineless.View.extend({
@@ -90,6 +90,27 @@ treated as attribute on the node.
 - **text -** will set the [`innerText`](https://developer.mozilla.org/en/docs/DOM/Node.textContent) of the node to this string value.
 - **view -** use a `Spineless.View` instead of creating a DOM node. Every other property on the object will be passed into the view constructor.
 - **id -** will allow the node to be referenced through an instance property.
+
+There may be situations where the template already exists in the HTML page. You
+can point the template to the parent node by passing its `ID` attribute
+as a string.
+
+~~~javascript
+<a id="existingButton">
+	<img name="icon" />
+	<span name="label"></span>
+</a>
+
+var Button = Spineless.View.extend({
+	template: "existingButton",
+	render: function () {
+		this.icon.style.display = "none";
+		this.label.innerText = "Hello";
+	}
+});
+~~~
+
+Any child nodes with an `id` or `name` attribute will become instance properties.
 
 ### **events** `view.events`
 Shorthand way of assigning instance methods to an event callback 

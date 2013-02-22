@@ -35,7 +35,7 @@ var Button = Spineless.View.extend({
 		//execute `init` on the View class
 		//with the same arguments passed into
 		//this constructor
-		Spineless.View.super(this, "init", arguments);
+		Button.super(this, "init", arguments);
 	}
 });
 ~~~
@@ -49,7 +49,7 @@ var Button = Spineless.View.extend({
 		//execute `init` on the View class
 		//with the same arguments passed into
 		//this constructor
-		Spineless.View(this, "init", arguments);
+		Button(this, "init", arguments);
 	}
 });
 ~~~

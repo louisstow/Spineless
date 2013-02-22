@@ -130,7 +130,7 @@ var Login = Spineless.View.extend({
 	template: [
 		{tag: "input", id: "username", type: "text"},
 		{tag: "input", id: "password", type: "password"},
-		{tag: "button", id: "submit"}
+		{tag: "button", id: "submit", text: "Go!"}
 	],
 
 	onsubmit: function () {
@@ -141,6 +141,28 @@ var Login = Spineless.View.extend({
 
 *Note: An input node is an HTML element typically used in forms. This
 includes `<input>`, `<select>`, `<button>`, `<textarea>`.*
+
+### **render** `view.render()`
+This method will be executed after the class has been instantiated
+and on any `Change` events. You should put all code to modify the DOM
+in this method.
+
+~~~javascript
+var UriEncoder = Spineless.View.extend({
+	defaults: {
+		input: ""
+	},
+
+	template: [
+		{tag: "input", id: "input"},
+		{tag: "span", id: "result"}
+	],
+
+	render: function () {
+		this.result.innerText = encodeURIComponent(this.model.input);
+	}
+});
+~~~
 
 ### Examples
 

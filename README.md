@@ -164,7 +164,7 @@ var UriEncoder = Spineless.View.extend({
 });
 ~~~
 
-### Examples
+## Examples
 
 The following example will create a Button view class.
 
@@ -210,3 +210,10 @@ must append the fragment to the webpage DOM tree. This is available through
 ~~~javascript
 document.getElementById("navigation").appendChild(myButton.el);
 ~~~
+
+## Legacy Browser Support
+Spineless makes use of a few modern JavaScript APIs. If you need to support
+older browsers you may need to shim these APIs.
+
+- `JSON.stringify()` - Used to serialize a View. Recommended shim: [json2](https://github.com/douglascrockford/JSON-js)
+- `Function.bind()` - This is a quick way to modify the context of a function. Recommended shim: [MDN](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind#Compatibility) or [ES5-shim](https://github.com/kriskowal/es5-shim)

@@ -462,7 +462,9 @@ var View = Event.extend({
 		if (typeof this.validate === "function") {
 			var err = this.validate();
 			if (err) {
-				return console.error(err);
+				this.validationError = err;
+				this.emit("invalid", err);
+				return err;
 			}
 		}
 

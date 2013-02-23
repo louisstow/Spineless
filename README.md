@@ -84,7 +84,7 @@ var Button = Spineless.View.extend({
 The following is a list of special properties. Everything else is
 treated as attribute on the node.
 
-- **tag -** HTML tag to create (`'a'`, `'span'`, `'input'`). Default `div`.
+- **tag -** HTML tag to create (e.g. `'a'`, `'span'`, `'input'`). Default `div`.
 - **children -** array of child nodes to create.
 - **className -** the class attribute. Generally styling.
 - **text -** will set the [`innerText`](https://developer.mozilla.org/en/docs/DOM/Node.textContent) of the node to this string value.
@@ -275,6 +275,15 @@ Bind to an event for one use only and then remove the callback.
 
 ### Internal Events
 
+- `change (key, value)` when a bound input node changes its value.
+- `change:key (value)` when a specific input node changes its value.
+- `dom:event (Event)` when a DOM event has been created through `events` object.
+- `child:add` when a child view has been added to `this`.
+- `child:remove` when a child view has been removed from `this`.
+- `parent:add` when a parent view has been added to `this`.
+- `parent:remove` when a parent view has been removed from `this`.
+- `invalid` when `validation()` returns an error.
+- `error` when an error occurs in `sync()`.
 
 ## Examples
 

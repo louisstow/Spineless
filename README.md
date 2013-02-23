@@ -270,6 +270,12 @@ this.on("ping", function (message) {
 this.emit("ping", "dong");
 ~~~
 
+### **once** `event.once(eventName, callback)`
+Bind to an event for one use only and then remove the callback.
+
+### Internal Events
+
+
 ## Examples
 
 The following example will create a Button view class.

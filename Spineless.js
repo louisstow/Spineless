@@ -404,10 +404,13 @@ var View = Event.extend({
 				
 				//emit the change events
 				if (this.model[key] !== value) {
+					this.emit("prechange", key, value);
+					this.emit("prechange:"+key, value);
+
 					this.model[key] = value;
 
-					this.emit("change", key, value, oldvalue);
-					this.emit("change:"+key, value, oldvalue);
+					this.emit("change", key, oldvalue);
+					this.emit("change:"+key, oldvalue);
 				}
 			}
 		}

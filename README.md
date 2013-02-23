@@ -275,8 +275,10 @@ Bind to an event for one use only and then remove the callback.
 
 ### Internal Events
 
-- `change (key, value)` when a bound input node changes its value.
-- `change:key (value)` when a specific input node changes its value.
+- `change (key, value)` after a bound input node changes its value.
+- `change:key (value)` after a specific input node changes its value.
+- `prechange (key, value)` before a bound input node changes its value.
+- `prechange:key (value)` before a specific input node changes its value.
 - `dom:event (DOMEvent)` when a [DOM event](https://developer.mozilla.org/en-US/docs/DOM/event) has been created through `events` object.
 - `child:add (child)` when a child view has been added to `this`.
 - `child:remove (child)` when a child view has been removed from `this`.

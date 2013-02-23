@@ -277,13 +277,13 @@ Bind to an event for one use only and then remove the callback.
 
 - `change (key, value)` when a bound input node changes its value.
 - `change:key (value)` when a specific input node changes its value.
-- `dom:event (Event)` when a DOM event has been created through `events` object.
-- `child:add` when a child view has been added to `this`.
-- `child:remove` when a child view has been removed from `this`.
-- `parent:add` when a parent view has been added to `this`.
-- `parent:remove` when a parent view has been removed from `this`.
-- `invalid` when `validation()` returns an error.
-- `error` when an error occurs in `sync()`.
+- `dom:event ([DOMEvent](https://developer.mozilla.org/en-US/docs/DOM/event))` when a DOM event has been created through `events` object.
+- `child:add (child)` when a child view has been added to `this`.
+- `child:remove (child)` when a child view has been removed from `this`.
+- `parent:add (parent)` when a parent view has been added to `this`.
+- `parent:remove (parent)` when a parent view has been removed from `this`.
+- `invalid (errorString)` when `validation()` returns an error.
+- `error (errorObject)` when an error occurs in `sync()`.
 
 ## Examples
 

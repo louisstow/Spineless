@@ -277,7 +277,7 @@ Bind to an event for one use only and then remove the callback.
 
 - `change (key, value)` when a bound input node changes its value.
 - `change:key (value)` when a specific input node changes its value.
-- `dom:event ([DOMEvent](https://developer.mozilla.org/en-US/docs/DOM/event))` when a DOM event has been created through `events` object.
+- `dom:event (DOMEvent)` when a [DOM event](https://developer.mozilla.org/en-US/docs/DOM/event) has been created through `events` object.
 - `child:add (child)` when a child view has been added to `this`.
 - `child:remove (child)` when a child view has been removed from `this`.
 - `parent:add (parent)` when a parent view has been added to `this`.

@@ -400,13 +400,15 @@ var View = Event.extend({
 
 			//if value has actually been set
 			if (value !== undefined) {
+				var oldvalue = this.model[key];
+				
 				//emit the change events
 				if (this.model[key] !== value) {
-					this.emit("change", key, value);
-					this.emit("change:"+key, value);
-				}
+					this.model[key] = value;
 
-				this.model[key] = value;
+					this.emit("change", key, value, oldvalue);
+					this.emit("change:"+key, value, oldvalue);
+				}
 			}
 		}
 
@@ -521,6 +523,9 @@ View.toDOM = function (ctx, obj, parent) {
 	if ('text' in obj)
 		el.innerText = obj.text;
 
+	if (obj.id && !obj.name)
+		el.setAttribute("name", obj.id);
+
 	//render children
 	if (obj.children) {
 		for (var i = 0; i < obj.children.length; ++i) {
@@ -537,7 +542,7 @@ View.toDOM = function (ctx, obj, parent) {
 		if (obj.id) ctx[obj.id] = el;
 
 		//if an input node, save to forms array
-		if (INPUT_NODE.indexOf(obj.tag) !== -1) {
+		if (INPUT_NODE.indexOf(obj.tag.toUpperCase()) !== -1) {
 			ctx.form.push(el);
 		}
 	} 

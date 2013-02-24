@@ -10,7 +10,7 @@ for (var header = 1; header <= 3; header++) {
 
 	for (var i = 0; i < current.length; ++i) {
 		var head = current[i];
-		var name = head.childNodes.length && head.childNodes[0];
+		var name = head.childNodes[0];
 		
 		//skip it!
 		if (!name || !name.tagName) continue;

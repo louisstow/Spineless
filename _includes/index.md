@@ -1,6 +1,7 @@
 ---
-layout:index
+layout: index
 ---
+
 # Test
 
 ~~~javascript

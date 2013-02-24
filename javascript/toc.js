@@ -1,7 +1,7 @@
 var rootNode = document.getElementById("content");
 var lastLevel = 0;
 
-var html = "";
+var html = "<ul>";
 for (var i = 0; i < rootNode.childNodes.length; ++i) {
 	var node = rootNode.childNodes[i];
 	if (!node.tagName || node.tagName.charAt(0) !== "H") {
@@ -26,5 +26,7 @@ for (var i = 0; i < rootNode.childNodes.length; ++i) {
 	html += "<li><a href='#" + hashable + "'>" + name + "</a><ul>";
 	lastLevel = level;
 }
+
+html += "</ul>";
 
 document.getElementById("nav").innerHTML = html;

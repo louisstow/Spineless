@@ -255,7 +255,7 @@ this.off("change");
 this.off();
 ~~~
 
-### **emit** `event.emit(eventName[, args*])` *alias: trigger, publish`*
+### **emit** `event.emit(eventName[, args*])` *alias: trigger, publish*
 Execute callbacks that are bound to this event name. Every subsequent argument
 will be passed into the callback function as arguments.
 

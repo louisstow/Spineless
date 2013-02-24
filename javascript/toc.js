@@ -11,7 +11,11 @@ for (var header = 1; header <= 3; header++) {
 	for (var i = 0; i < current.length; ++i) {
 		var head = current[i];
 		var name = head.childNodes.length && head.childNodes[0];
-		if (name && name.tagName.toLowerCase() === "strong") {
+		
+		//skip it!
+		if (!name || !name.tagName) continue;
+
+		if (name.tagName.toLowerCase() === "strong") {
 			console.log(name.innerText);
 		}
 	}

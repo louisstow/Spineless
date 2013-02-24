@@ -23,7 +23,7 @@ for (var i = 0; i < rootNode.childNodes.length; ++i) {
 		html += "</ul></li>";
 	}
 
-	html += "<li class='lvl"+level+"'><a href='#" + hashable + "'>" + name + "</a><ul>";
+	html += "<li><a class='lvl"+level+"' href='#" + hashable + "'>" + name + "</a><ul>";
 	lastLevel = level;
 }
 

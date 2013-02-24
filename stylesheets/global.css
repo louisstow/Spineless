@@ -2,3 +2,14 @@ body, html {
 	margin: 0;
 	font-family: sans-serif;
 }
+
+#content {
+	margin-left: 250px;
+}
+
+#nav {
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+}

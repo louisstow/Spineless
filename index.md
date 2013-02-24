@@ -1,6 +1,9 @@
 ---
 layout: index
-nav: {% include nav.md %}
 ---
+<div id="nav">
+<ul id="toc">
+</ul>
+</div>
 
 {% include content.md %}

@@ -1,6 +1,7 @@
 body, html {
 	margin: 0;
 	font-family: sans-serif;
+	line-height: 22px;
 }
 
 #content {
@@ -35,6 +36,15 @@ a.lvl2 {
     color: #444;
 }
 
+#nav ul ul li:before {
+    content: "- ";
+}
+
+h3 {
+	background: #eee;
+	padding: 5px 10px;
+}
+
 h3 code {
     background: #eee;
     position: relative;
@@ -48,4 +58,8 @@ h3 code {
 h3 em {
     float: right;
     margin-right: 15px;
+}
+
+pre {
+	line-height: 18px;
 }

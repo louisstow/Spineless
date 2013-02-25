@@ -1,6 +1,16 @@
-# Spineless
+# Spineless.js
 
-This project is my ideal front-end JavaScript library (like Backbone or Spine) but with a much looser paradigm.
+## Introduction
+
+**Spineless.js** is a front-end framework intended for dynamically building complex UI without concatenating huge HTML strings or lots of `document.createElement`''s. You simply define templates in JSON (or reference an existing template in your page) and Spineless will neatly wrap it in an easy to use class.
+
+## Download
+
+Right-click then "Save As"
+
+- [Development 0.1](https://raw.github.com/louisstow/Spineless/master/Spineless.js)
+- [Production 0.1](https://raw.github.com/louisstow/Spineless/master/Spineless.min.js)
+- [Unstable](https://raw.github.com/louisstow/Spineless/develop/Spineless.js)
 
 ## Spineless.View
 

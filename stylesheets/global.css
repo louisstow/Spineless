@@ -5,6 +5,7 @@ body, html {
 
 #content {
 	margin-left: 250px;
+	margin-right: 15px;
 }
 
 #nav {
@@ -32,4 +33,19 @@ a.lvl2 {
 #nav li a {
     text-decoration: none;
     color: #444;
+}
+
+h3 code {
+    background: #eee;
+    position: relative;
+    padding: 5px;
+    margin: 0 0 0 20px;
+    font-weight: normal;
+    top: -2px;
+    font-size: 14px;
+}
+
+h3 em {
+    float: right;
+    margin-right: 15px;
 }

@@ -12,6 +12,11 @@ Right-click then "Save As"
 - [Production 0.1](https://raw.github.com/louisstow/Spineless/master/Spineless.min.js)
 - [Unstable](https://raw.github.com/louisstow/Spineless/develop/Spineless.js)
 
+## Demos
+
+- [Todo App, obviously](examples/todo.html)
+- [Registration Page](examples/register.html)
+
 ## Spineless.View
 
 Every object in Spineless is a `View`. It contains some data (or a Model) and a DOM template. This template is converted to DOM nodes and appended to a DocumentFragment.

@@ -1,3 +1,5 @@
+var ENTER_KEY = 13;
+
 //main view
 TodoView = Spineless.View.extend({
 	init: function (opts) {
@@ -14,15 +16,21 @@ TodoView = Spineless.View.extend({
 	events: {
 		'keyup new-todo': 'addTask',
 		'click toggle-all': 'toggleAll',
-		'click all': 'filter',
-		'click active': 'filter',
-		'click completed': 'filter',
 		'click clear-completed': 'clearCompleted'
+	},
+
+	routes: {
+		'/': 'handleRoute',
+		'/completed': 'handleRoute',
+		'/active': 'handleRoute',
 	},
 
 	addTask: function (e) {
 		//on ENTER key save the task
-		if (e.which !== 13)
+		if (e.which !== ENTER_KEY)
+			return;
+
+		if (this['new-todo'].value.trim() === "")
 			return;
 
 		this.addChild(new ItemView({
@@ -33,20 +41,17 @@ TodoView = Spineless.View.extend({
 		this['new-todo'].value = ""; //clear textbox
 	},
 
-	filter: function (e, evt, obj, node) {
-		var show = false;
+	handleRoute: function (route) {
+		var link = route.substr(1) || "all";
+		this.filter(link);
+	},
 
-		for (var i = 0; i < this.children.length; ++i) {
-			//show or hide the view based on the filter
-			if (obj === "all") show = true;
-			else if (obj === "active") show = !this.children[i].model.done;
-			else if (obj === "completed") show = this.children[i].model.done;
+	filter: function (type) {
+		this.model.filter = type;
 
-			this.children[i].container.style.display = show ? "block" : "none";
-		}
-
+		//reset the selected class
 		this.all.className = this.active.className = this.completed.className = "";
-		node.className = "selected";
+		this[type].className = "selected";
 	},
 
 	//if all completed, mark all as uncomplete
@@ -88,6 +93,8 @@ TodoView = Spineless.View.extend({
 	},
 
 	render: function () {
+		TodoView.super(this, "render");
+
 		var left = 0;
 		var completed = 0;
 
@@ -100,7 +107,7 @@ TodoView = Spineless.View.extend({
 		}
 
 		//add the counts to the footer info
-		this['todo-count'].innerText = left + " items left";
+		this['todo-count'].innerHTML = "<strong>" + left + "</strong> item" + (left != 1 ? "s" : "") + " left";
 		this['clear-completed'].innerText = "Clear Completed (" + completed + ")";
 
 		//hide the clear button if nothing to clear
@@ -141,16 +148,21 @@ ItemView = Spineless.View.extend({
 	events: {
 		'click remove': 'removeFromParent',
 		'dblclick label': 'edit',
-		'blur text': 'close'
+		'blur text': 'close',
+		'keyup text': 'close'
 	},
 
 	edit: function () {
-		console.log("EDIT")
 		this.text.value = this.model.text;
 		this.li.className += " editing";
 	},
 
-	close: function () {
+	close: function (e) {
+		//check for ENTER key
+		if (e.which && e.which !== ENTER_KEY) {
+			return;
+		}
+
 		this.li.className = this.model.done ? "completed" : "";
 		if (this.text.value === "") {
 			this.removeFromParent();
@@ -159,6 +171,15 @@ ItemView = Spineless.View.extend({
 
 	render: function () {
 		this.label.innerText = this.model.text;
+
+		//show or hide based on the parent filter
+		var style = this.container.style;
+		if (this.parent.model.filter === "completed")
+			style.display = !this.model.done ? "none" : "block";
+		else if (this.parent.model.filter === "active")
+			style.display = this.model.done ? "none" : "block";
+		else
+			style.display = "block";
 
 		if (this.model.done && !this.li.classList.contains("completed"))
 			this.li.classList.add("completed");

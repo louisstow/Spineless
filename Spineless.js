@@ -269,7 +269,7 @@ var View = Event.extend({
 			}
 		}
 
-		this.on("change", this.render);
+		this.on("change child:*", this.render);
 
 		//execute render after initialisation
 		setTimeout(function() {

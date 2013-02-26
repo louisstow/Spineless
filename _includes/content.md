@@ -4,6 +4,8 @@
 
 **Spineless.js** is a front-end framework intended for dynamically building complex UI without concatenating huge HTML strings or lots of `document.createElement`''s. You simply define templates in JSON (or reference an existing template in your page) and Spineless will neatly wrap it in an easy to use class.
 
+The project is hosted on [GitHub](http://github.com/louisstow/Spineless). Please submit any issues to the [GitHub issue tracker](https://github.com/louisstow/Spineless/issues). You may find support by posting in the [Google Group](https://groups.google.com/forum/?fromgroups=#!forum/spinelessjs).
+
 ## Download
 
 Right-click then "Save As"
@@ -15,7 +17,7 @@ Right-click then "Save As"
 ## Demos
 
 - [Todo App, obviously](examples/todo.html)
-- [Registration Page](examples/register.html)
+- More coming soon...
 
 ## Spineless.View
 
@@ -80,6 +82,9 @@ var button = new Button();
 document.body.appendChild(button.el);
 ~~~
 
+### **container** `view.container`
+When a template has been generated from JSON, a wrapper will automatically be created to wrap all the generated DOM nodes. This is called the `container` and is simply a `<div>` tag with the class `container`.
+
 ### **template** `view.template`
 The heart of Views are templates represented as JSON and converted
 to a DOM tree. It accepts an array of objects where the object
@@ -97,7 +102,7 @@ var Button = Spineless.View.extend({
 ~~~
 
 The following is a list of special properties. Everything else is
-treated as attribute on the node.
+treated as an attribute on the node.
 
 - **tag -** HTML tag to create (e.g. `'a'`, `'span'`, `'input'`). Default `div`.
 - **children -** array of child nodes to create.
@@ -146,6 +151,36 @@ var Button = Spineless.View.extend({
 The key is a notation to define first the event then the element in the
 template by `id` (seperated by a space). The value is a string representing 
 the method name in the class to trigger.
+
+### **routes** `view.routes`
+A very simple route handling system similar to `view.events`. Specify a route and the callback method to execute. 
+
+*Note: It is currently very basic so I recommend utilising a third-party routing library for any complex requirements.*
+
+~~~javascript
+var TabView = Spineless.View.extend({
+	template: [
+		{id: "contentOne", text: "Hi, My name is page one or default tab"},
+		{id: "contentTwo", text: "...and I am page 2!"}
+	],
+
+	routes: {
+		"/": "defaultTab",
+		"/page-one": "defaultTab",
+		"/page-two": "pageTwo"
+	},
+
+	defaultTab: function () {
+		this.contentOne.display = "block";
+		this.contentTwo.display = "none";
+	},
+
+	pageTwo: function () {
+		this.contentOne.display = "none";
+		this.contentTwo.display = "block";
+	}
+});
+~~~
 
 ### **defaults** `view.defaults`
 Use this object to define the properties for the `model` object of a view and
@@ -215,6 +250,59 @@ var UriEncoder = Spineless.View.extend({
 	}
 });
 ~~~
+
+### **parent** `view.parent`
+If the current view has been added to another view as a child, will be a reference to the parent view.
+
+### **superview** `view.superview`
+Similar to `view.parent` but instead of a reference to a `View` instance, is a reference to the parent DOM node. This must be manually set when initialising the class or else will default to `parent.el`.
+
+### **addChild** `view.addChild(view)`
+Add a subview to this view. This will make the current view the parent of the child you specify.
+
+~~~javascript
+var TableView = Spineless.View.extend({
+	template: [
+		//we want this to be the superview
+		{tag: "table", id: "tableNode"}
+	]
+});
+
+var RowView = Spineless.View.extend({
+	defaults: {
+		content: "Empty row"
+	},
+
+	template: [
+		{tag: "tr", children: [
+			{tag: "td", id: "row"}
+		]}
+	],
+
+	render: function () {
+		this.row.innerText = this.model.content;
+	}
+});
+
+parentView = new TableView();
+
+//create 10 rows
+for (var count = 0; count < 10; ++count) {
+	parentView.addChild(
+		//create an instance of RowView and add as child
+		new RowView({
+			superview: parentView.tableNode,
+			content: "Row #" + count
+		})
+	);
+}
+~~~
+
+### **removeChild** `view.removeChild(child)`
+Remove a child view from the heirarchy. Will remove the DOM node `child.container` from its parent `child.superview`.
+
+### **removeFromParent** `view.removeFromParent()`
+Allow a view to remove itself without needing a reference to the parent.
 
 ## Spineless.Event
 

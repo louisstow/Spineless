@@ -1,0 +1,39 @@
+<html>
+<head>
+<style>
+body { font-size: 20px; font-family: sans-serif; }
+</style>
+</head>
+<body>
+<div id="register"></div>
+
+<script src="Spineless.js"></script>
+<script src="components.js"></script>
+<script>
+var planItems = [
+	{value: 0, label: "Simple (3 users) - Free"},
+	{value: 1, label: "Startup (20 users) - $29/month"},
+	{value: 2, label: "Pro (100 users) - $99/month"},
+	{value: 3, label: "Enteprise (Unlimited users) - $599/month"}
+];
+
+Form = Spineless.View.extend({
+	defaults: {
+		username: "",
+		password: "",
+		agree: false
+	},
+
+	template: [
+		{view: InputView, label: "Username:", type: "text"},
+		{view: InputView, label: "Password:", type: "password"},
+		{view: SelectView, label: "Plan:", options: planItems},
+		{view: InputView, label: "I agree to terms", type: "checkbox"}
+	]
+});
+
+form = new Form();
+document.getElementById("register").appendChild(form.el);
+</script>
+</body>
+</html>

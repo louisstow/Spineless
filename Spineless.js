@@ -206,6 +206,12 @@ Event.prototype.trigger = Event.prototype.publish = Event.prototype.emit;
 
 Event.extend = createExtend(Event);
 
+var views = [];
+win.onhashchange = function () {
+	for (var i = 0; i < views.length; ++i)
+		views[i].executeRoutes();
+}
+
 /**
 * Spineless Views are the backbone of the framework. Use
 * this class to build your DOM structure in JSON, assign
@@ -224,6 +230,7 @@ var View = Event.extend({
 		this.parent = opts.parent;
 		this.superview = opts.superview || (this.parent && this.parent.el);
 		this.children = [];
+		views.push(this);
 
 		//internal structures
 		this.model = {};
@@ -269,7 +276,12 @@ var View = Event.extend({
 			}
 		}
 
-		this.on("change", this.render);
+		//a very simple route handler
+		if (typeof this.routes === "object") {
+			this.executeRoutes();
+		}
+
+		this.on("change child:* route", this.render);
 
 		//execute render after initialisation
 		setTimeout(function() {
@@ -283,6 +295,19 @@ var View = Event.extend({
 		}, 0);
 	},
 
+	executeRoutes: function () {
+		var hash = location.hash.substr(1);
+			
+		for (var route in this.routes) {
+			if (route === hash) {
+				this[this.routes[route]].call(this, hash);
+
+				this.emit("route", route);
+				this.emit("route:" + route);
+			}
+		}
+	},
+
 	attachEvent: function (obj, evt, cb) {
 		var self = this;
 
@@ -292,7 +317,7 @@ var View = Event.extend({
 			e = e || window.event;
 
 			self.emit("dom:" + evt, e, self);
-			return cb && cb.call(self, e);
+			return cb && cb.call(self, e, evt, obj, self[obj]);
 		};
 	},
 
@@ -307,6 +332,10 @@ var View = Event.extend({
 		child.emit("parent:add", this);
 	},
 
+	removeChild: function (child) {
+		child.removeFromParent();
+	},
+
 	removeFromParent: function () {
 		var children = this.parent.children;
 		for (var i = children.length - 1; i >= 0; --i) {
@@ -316,7 +345,12 @@ var View = Event.extend({
 			}
 		}
 
-		this.superview.removeChild(this.container);
+		//wrap this in a try catch to prevent exception
+		//when removing in a blur handler
+		try {
+			this.superview.removeChild(this.container);
+		} catch(e) {}
+		
 		this.parent.emit("child:remove", this);
 		this.emit("parent:remove", parent);
 	},
@@ -454,6 +488,26 @@ var View = Event.extend({
 		return model;
 	},
 
+	set: function (key, value) {
+		//allow passing an object
+		if (typeof key === "object") {
+			for (var realkey in key) {
+				this.set(realkey, key[realkey]);
+			}
+
+			return;
+		}
+
+		this.emit("prechange", key, value);
+		this.emit("prechange:"+key, value);
+		
+		var oldvalue = this.model[key];
+		this.model[key] = value;
+
+		this.emit("change", key, oldvalue);
+		this.emit("change:"+key, oldvalue);
+	},
+
 	serialize: function () {
 		return JSON.stringify(this.getModel());
 	},
@@ -485,7 +539,11 @@ var View = Event.extend({
 	},
 
 	//shim functions
-	render: function () {}
+	render: function () {
+		for (var i = 0; i < this.children.length; ++i) {
+			this.children[i].render();
+		}
+	}
 });
 
 /**
@@ -514,7 +572,8 @@ View.toDOM = function (ctx, obj, parent) {
 		return view.el;
 	}
 
-	var el = document.createElement(obj.tag || "div");
+	var tag = obj.tag || "div";
+	var el = document.createElement(tag);
 
 	for (var key in obj)
 		if (blacklist.indexOf(key) === -1)
@@ -544,8 +603,9 @@ View.toDOM = function (ctx, obj, parent) {
 		//save a ref on the context
 		if (obj.id) ctx[obj.id] = el;
 
+
 		//if an input node, save to forms array
-		if (INPUT_NODE.indexOf(obj.tag.toUpperCase()) !== -1) {
+		if (INPUT_NODE.indexOf(tag.toUpperCase()) !== -1) {
 			ctx.form.push(el);
 		}
 	} 
@@ -588,5 +648,6 @@ Spineless.Event = Event;
 Spineless.View = View;
 Spineless.merge = merge;
 Spineless.Source = Source;
+Spineless.views = views;
 
 })(window, window.document);

@@ -292,7 +292,7 @@ var View = Event.extend({
 			e = e || window.event;
 
 			self.emit("dom:" + evt, e, self);
-			return cb && cb.call(self, e);
+			return cb && cb.call(self, e, evt, obj, self[obj]);
 		};
 	},
 
@@ -305,6 +305,10 @@ var View = Event.extend({
 		this.children.push(child);
 		this.emit("child:add", child);
 		child.emit("parent:add", this);
+	},
+
+	removeChild: function (child) {
+		child.removeFromParent();
 	},
 
 	removeFromParent: function () {
@@ -454,6 +458,26 @@ var View = Event.extend({
 		return model;
 	},
 
+	set: function (key, value) {
+		//allow passing an object
+		if (typeof key === "object") {
+			for (var realkey in key) {
+				this.set(realkey, key[realkey]);
+			}
+
+			return;
+		}
+
+		this.emit("prechange", key, value);
+		this.emit("prechange:"+key, value);
+		
+		var oldvalue = this.model[key];
+		this.model[key] = value;
+
+		this.emit("change", key, oldvalue);
+		this.emit("change:"+key, oldvalue);
+	},
+
 	serialize: function () {
 		return JSON.stringify(this.getModel());
 	},
@@ -514,7 +538,8 @@ View.toDOM = function (ctx, obj, parent) {
 		return view.el;
 	}
 
-	var el = document.createElement(obj.tag || "div");
+	var tag = obj.tag || "div";
+	var el = document.createElement(tag);
 
 	for (var key in obj)
 		if (blacklist.indexOf(key) === -1)
@@ -544,8 +569,9 @@ View.toDOM = function (ctx, obj, parent) {
 		//save a ref on the context
 		if (obj.id) ctx[obj.id] = el;
 
+
 		//if an input node, save to forms array
-		if (INPUT_NODE.indexOf(obj.tag.toUpperCase()) !== -1) {
+		if (INPUT_NODE.indexOf(tag.toUpperCase()) !== -1) {
 			ctx.form.push(el);
 		}
 	} 

@@ -390,6 +390,19 @@ Bind to an event for one use only and then remove the callback.
 - `invalid (errorString)` when `validation()` returns an error.
 - `error (errorObject)` when an error occurs in `sync()`.
 
+## Spineless.$
+Communication through the server is done through AJAX and specifically the [jQuery API](http://api.jquery.com/jQuery.ajax/). The value will default to the jQuery or Zepto namespace if it exists otherwise you may set this value to the framework namespace of your choice as long as [`$.ajax()`](http://api.jquery.com/jQuery.ajax/) is implemented.
+
+If you need custom communication through WebSockets or another transportation method, simply override [`view.sync()`](#sync).
+
+~~~javascript
+MyAjaxFramework = {
+	ajax: function () { ... }	
+};
+
+Spineless.$ = MyAjaxFramework;
+~~~
+
 ## Examples
 
 The following example will create a Button view class.

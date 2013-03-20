@@ -2,7 +2,7 @@
 
 //create the global namespace
 var Spineless = win.Spineless = {};
-Spineless.$ = win.$;
+Spineless.$ = win.jQuery || win.Zepto || win.$;
 
 //list of attributes that require special processing
 var blacklist = [
@@ -234,7 +234,7 @@ var View = Event.extend({
 
 		//internal structures
 		this.model = {};
-		this.form = [];
+		this._form = [];
 
 		//template exists in DOM, parse it
 		if (typeof this.template === "string") {
@@ -392,7 +392,7 @@ var View = Event.extend({
 
 				//add the node to the form array
 				if (INPUT_NODE.indexOf(collection[i].nodeName) !== -1) {
-					this.form.push(collection[i]);
+					this._form.push(collection[i]);
 				}
 			}
 
@@ -410,9 +410,9 @@ var View = Event.extend({
 		
 		//callback to handle all changes
 		function handleChange () {
-			for (var i = 0; i < this.form.length; ++i) {
+			for (var i = 0; i < this._form.length; ++i) {
 				//mock the evt object
-				handleSingleChange({target: this.form[i]});
+				handleSingleChange({target: this._form[i]});
 			}
 		}
 
@@ -451,9 +451,9 @@ var View = Event.extend({
 
 		if (DETECT.ON_INPUT) {
 			//if the new oninput event is supported, use that
-			for (var i = 0; i < this.form.length; ++i) {
-				this.form[i].addEventListener("input", handleSingleChange.bind(this), false);
-				this.form[i].addEventListener("change", handleSingleChange.bind(this), false);
+			for (var i = 0; i < this._form.length; ++i) {
+				this._form[i].addEventListener("input", handleSingleChange.bind(this), false);
+				this._form[i].addEventListener("change", handleSingleChange.bind(this), false);
 			}
 		} else {
 			//otherwise setup an interval to poll the value
@@ -525,6 +525,28 @@ var View = Event.extend({
 				this.emit("invalid", err);
 				return err;
 			}
+		}
+
+
+		if (Spineless.$) {
+			var self = this;
+
+			Spineless.$.ajax({
+				type: method,
+				url: url,
+				dataType: 'json',
+				data: JSON.stringify(data),
+				contentType: "application/json",
+
+				success: function (resp) {
+					self.emit("success", url, resp);
+					self.emit("success:"+url, resp);
+				},
+
+				error: function (err) {
+					self.emit("error", err);
+				}
+			});
 		}
 
 		console.log(method, url, JSON.stringify(data));
@@ -606,7 +628,7 @@ View.toDOM = function (ctx, obj, parent) {
 
 		//if an input node, save to forms array
 		if (INPUT_NODE.indexOf(tag.toUpperCase()) !== -1) {
-			ctx.form.push(el);
+			ctx._form.push(el);
 		}
 	} 
 

@@ -362,8 +362,14 @@ var View = Event.extend({
 		var tpl = this.template;
 		if (!tpl) return;
 
-		var container = document.createElement("div");
-		container.setAttribute("class", "spine-container");
+		var container;
+		//use the root element as the container
+		if (tpl.length === 1 && tpl[0].id === "container") {
+			container = this.el;
+		} else {
+			container = document.createElement("div");
+			container.setAttribute("class", "spine-container");
+		}
 		
 		for (var i = 0; i < tpl.length; ++i) {
 			View.toDOM(this, tpl[i], container);

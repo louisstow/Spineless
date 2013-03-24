@@ -610,8 +610,10 @@ View.toDOM = function (ctx, obj, parent) {
 	if (obj.className)
 		el.setAttribute("class", obj.className);
 
-	if ('text' in obj)
+	if ('text' in obj) {
 		el.innerText = obj.text;
+		el.textContent = obj.text;
+	}
 
 	if (obj.id && !obj.name)
 		el.setAttribute("name", obj.id);

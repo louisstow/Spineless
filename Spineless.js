@@ -363,7 +363,7 @@ var View = Event.extend({
 		if (!tpl) return;
 
 		var container = document.createElement("div");
-		container.setAttribute("class", "container");
+		container.setAttribute("class", "spine-container");
 		
 		for (var i = 0; i < tpl.length; ++i) {
 			View.toDOM(this, tpl[i], container);

@@ -365,7 +365,7 @@ var View = Event.extend({
 		var container;
 		//use the root element as the container
 		if (tpl.length === 1 && tpl[0].id === "container") {
-			container = this.el;
+			container = document.createDocumentFragment();
 		} else {
 			container = document.createElement("div");
 			container.setAttribute("class", "spine-container");

@@ -2,7 +2,7 @@
 
 //create the global namespace
 var Spineless = win.Spineless = {};
-Spineless.$ = win.jQuery || win.Zepto || win.$;
+Spineless.$ = win.$ || win.jQuery || win.Zepto;
 
 //list of attributes that require special processing
 var blacklist = [
@@ -87,6 +87,7 @@ function createExtend (parent) {
 		for (var key in opts)
 			cls.prototype[key] = opts[key];
 
+		cls.prototype.super = parent.prototype;
 		return cls;
 	};
 }
@@ -234,7 +235,7 @@ var View = Event.extend({
 
 		//internal structures
 		this.model = {};
-		this._form = [];
+		this.form = [];
 
 		//template exists in DOM, parse it
 		if (typeof this.template === "string") {
@@ -362,14 +363,8 @@ var View = Event.extend({
 		var tpl = this.template;
 		if (!tpl) return;
 
-		var container;
-		//use the root element as the container
-		if (tpl.length === 1 && tpl[0].id === "container") {
-			container = document.createDocumentFragment();
-		} else {
-			container = document.createElement("div");
-			container.setAttribute("class", "spine-container");
-		}
+		var container = document.createElement("div");
+		container.setAttribute("class", "container");
 		
 		for (var i = 0; i < tpl.length; ++i) {
 			View.toDOM(this, tpl[i], container);
@@ -398,7 +393,7 @@ var View = Event.extend({
 
 				//add the node to the form array
 				if (INPUT_NODE.indexOf(collection[i].nodeName) !== -1) {
-					this._form.push(collection[i]);
+					this.form.push(collection[i]);
 				}
 			}
 
@@ -416,9 +411,9 @@ var View = Event.extend({
 		
 		//callback to handle all changes
 		function handleChange () {
-			for (var i = 0; i < this._form.length; ++i) {
+			for (var i = 0; i < this.form.length; ++i) {
 				//mock the evt object
-				handleSingleChange({target: this._form[i]});
+				handleSingleChange({target: this.form[i]});
 			}
 		}
 
@@ -457,9 +452,9 @@ var View = Event.extend({
 
 		if (DETECT.ON_INPUT) {
 			//if the new oninput event is supported, use that
-			for (var i = 0; i < this._form.length; ++i) {
-				this._form[i].addEventListener("input", handleSingleChange.bind(this), false);
-				this._form[i].addEventListener("change", handleSingleChange.bind(this), false);
+			for (var i = 0; i < this.form.length; ++i) {
+				this.form[i].addEventListener("input", handleSingleChange.bind(this), false);
+				this.form[i].addEventListener("change", handleSingleChange.bind(this), false);
 			}
 		} else {
 			//otherwise setup an interval to poll the value
@@ -510,6 +505,10 @@ var View = Event.extend({
 		var oldvalue = this.model[key];
 		this.model[key] = value;
 
+		if (this[key] && this.form.indexOf(this[key]) > -1) {
+			this[key].value = value;
+		}
+
 		this.emit("change", key, oldvalue);
 		this.emit("change:"+key, oldvalue);
 	},
@@ -533,37 +532,31 @@ var View = Event.extend({
 			}
 		}
 
+		var self = this;
+		Spineless.$.ajax({
+			method: method,
+			url: url,
+			dataType: 'json',
+			data: data,
+			success: function (resp) {
+				self.emit("sync", resp);
+				self.emit("sync:" + method.toLowerCase(), resp);
+			},
 
-		if (Spineless.$) {
-			var self = this;
-
-			Spineless.$.ajax({
-				type: method,
-				url: url,
-				dataType: 'json',
-				data: JSON.stringify(data),
-				contentType: "application/json",
-
-				success: function (resp) {
-					self.emit("success", url, resp);
-					self.emit("success:"+url, resp);
-				},
-
-				error: function (err) {
-					self.emit("error", err);
-				}
-			});
-		}
+			error: function () {
+				self.emit("error", arguments);
+			}
+		});
 
 		console.log(method, url, JSON.stringify(data));
 	},
 
-	post: function () {
-		this.sync("POST", this.url, this.model);
+	post: function (url, data) {
+		this.sync("POST", url || this.url, data || this.model);
 	},
 
-	delete: function () {
-		this.sync("DELETE", this.url, this.model);
+	delete: function (url, data) {
+		this.sync("DELETE", url || this.url, data || this.model);
 	},
 
 	//shim functions
@@ -595,6 +588,10 @@ View.toDOM = function (ctx, obj, parent) {
 		
 		if (ctx) {
 			ctx.addChild(view);
+
+			if (obj.id) {
+				ctx[obj.id] = view;
+			}
 		}
 
 		return view.el;
@@ -610,10 +607,8 @@ View.toDOM = function (ctx, obj, parent) {
 	if (obj.className)
 		el.setAttribute("class", obj.className);
 
-	if ('text' in obj) {
-		el.innerText = obj.text;
-		el.textContent = obj.text;
-	}
+	if ('text' in obj)
+		el.textContent = el.innerText = obj.text;
 
 	if (obj.id && !obj.name)
 		el.setAttribute("name", obj.id);
@@ -636,7 +631,7 @@ View.toDOM = function (ctx, obj, parent) {
 
 		//if an input node, save to forms array
 		if (INPUT_NODE.indexOf(tag.toUpperCase()) !== -1) {
-			ctx._form.push(el);
+			ctx.form.push(el);
 		}
 	} 
 

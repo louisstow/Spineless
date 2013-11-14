@@ -11,15 +11,16 @@ var blacklist = [
 	"children",
 	"className",
 	"text",
-	"view"
+	"html",
+	"view",
+	"container"
 ];
 
 //list of input nodeName variations
 var INPUT_NODE = [
 	"INPUT",
 	"SELECT",
-	"TEXTAREA",
-	"BUTTON"
+	"TEXTAREA"
 ];
 
 //feature detection constants
@@ -87,7 +88,7 @@ function createExtend (parent) {
 		for (var key in opts)
 			cls.prototype[key] = opts[key];
 
-		cls.prototype.super = parent.prototype;
+		cls.prototype.super = cls.super;//parent.prototype;
 		return cls;
 	};
 }
@@ -237,6 +238,8 @@ var View = Event.extend({
 		this.model = {};
 		this.form = [];
 
+		this.uid = "i" + (++UID);
+
 		//template exists in DOM, parse it
 		if (typeof this.template === "string") {
 			this.el = document.getElementById(this.template);
@@ -292,7 +295,11 @@ var View = Event.extend({
 			if (!self.superview && self.parent)
 				self.superview = self.parent.el;
 
+			if (typeof self.superview === "string")
+				self.superview = document.getElementById(self.superview)
+
 			self.superview && self.superview.appendChild(self.el);
+			self.emit("init");
 		}, 0);
 	},
 
@@ -338,11 +345,13 @@ var View = Event.extend({
 	},
 
 	removeFromParent: function () {
-		var children = this.parent.children;
-		for (var i = children.length - 1; i >= 0; --i) {
-			if (children[i] === this) {
-				children.splice(i, 1);
-				break;
+		if (this.parent) {
+			var children = this.parent.children;
+			for (var i = children.length - 1; i >= 0; --i) {
+				if (children[i] === this) {
+					children.splice(i, 1);
+					break;
+				}
 			}
 		}
 
@@ -352,7 +361,7 @@ var View = Event.extend({
 			this.superview.removeChild(this.container);
 		} catch(e) {}
 		
-		this.parent.emit("child:remove", this);
+		this.parent && this.parent.emit("child:remove", this);
 		this.emit("parent:remove", parent);
 	},
 
@@ -362,16 +371,23 @@ var View = Event.extend({
 	renderTemplate: function (parent) {
 		var tpl = this.template;
 		if (!tpl) return;
-
-		var container = document.createElement("div");
-		container.setAttribute("class", "container");
 		
+		var frag = document.createDocumentFragment();
+
 		for (var i = 0; i < tpl.length; ++i) {
-			View.toDOM(this, tpl[i], container);
+			View.toDOM(this, tpl[i], frag);
 		}
 
-		parent.appendChild(container);
-		this.container = container;
+		if (!this.container) {
+			var container = document.createElement("div");
+			container.setAttribute("class", "container");
+			this.container = container;
+		}
+
+		try {
+			this.container.appendChild(frag);
+		} catch(e) { debugger; }
+		parent.appendChild(this.container);
 	},
 
 	parseTemplate: function (parent) {
@@ -413,7 +429,7 @@ var View = Event.extend({
 		function handleChange () {
 			for (var i = 0; i < this.form.length; ++i) {
 				//mock the evt object
-				handleSingleChange({target: this.form[i]});
+				handleSingleChange.call(this, {target: this.form[i]});
 			}
 		}
 
@@ -422,6 +438,8 @@ var View = Event.extend({
 			var input = evt.target;
 			var key = input.id || input.name;
 			var value;
+
+			if (!key) { return; }
 
 			if (input.type === "checkbox") {
 				value = input.checked;
@@ -443,9 +461,9 @@ var View = Event.extend({
 					this.emit("prechange:"+key, value);
 
 					this.model[key] = value;
-
-					this.emit("change", key, oldvalue);
-					this.emit("change:"+key, oldvalue);
+					
+					this.emit("change", key, value, oldvalue);
+					this.emit("change:"+key, value, oldvalue);
 				}
 			}
 		}
@@ -460,6 +478,8 @@ var View = Event.extend({
 			//otherwise setup an interval to poll the value
 			this._interval = setInterval(handleChange, 300);
 		}
+
+		handleChange.call(this);
 	},
 
 	_unbindForms: function () {
@@ -509,8 +529,8 @@ var View = Event.extend({
 			this[key].value = value;
 		}
 
-		this.emit("change", key, oldvalue);
-		this.emit("change:"+key, oldvalue);
+		this.emit("change", key, value, oldvalue);
+		this.emit("change:"+key, value, oldvalue);
 	},
 
 	serialize: function () {
@@ -534,17 +554,19 @@ var View = Event.extend({
 
 		var self = this;
 		Spineless.$.ajax({
-			method: method,
+			type: method,
 			url: url,
 			dataType: 'json',
 			data: data,
+
 			success: function (resp) {
 				self.emit("sync", resp);
 				self.emit("sync:" + method.toLowerCase(), resp);
 			},
 
-			error: function () {
-				self.emit("error", arguments);
+			error: function (resp) {
+				self.emit("error", resp);
+				self.emit("error:" + method.toLowerCase(), resp);
 			}
 		});
 
@@ -557,6 +579,14 @@ var View = Event.extend({
 
 	delete: function (url, data) {
 		this.sync("DELETE", url || this.url, data || this.model);
+	},
+
+	show: function () {
+		this.container.style.display = "block";
+	},
+
+	hide: function () {
+		this.container.style.display = "none";
 	},
 
 	//shim functions
@@ -583,8 +613,9 @@ View.toDOM = function (ctx, obj, parent) {
 
 	//template is a view instead of DOM
 	if (obj.view) {
+		obj.superview = parent
 		var view = new obj.view(obj);
-		view.superview = parent;
+		//view.superview = parent;
 		
 		if (ctx) {
 			ctx.addChild(view);
@@ -610,8 +641,18 @@ View.toDOM = function (ctx, obj, parent) {
 	if ('text' in obj)
 		el.textContent = el.innerText = obj.text;
 
-	if (obj.id && !obj.name)
+	if ('html' in obj)
+		el.innerHTML = obj.html;
+
+	if (obj.id && !obj.name) 
 		el.setAttribute("name", obj.id);
+
+	obj.id && el.setAttribute("id", obj.id);
+
+	if (obj.container && ctx) {
+		ctx['container'] = el;
+		parent = el;
+	}
 
 	//render children
 	if (obj.children) {
@@ -621,13 +662,12 @@ View.toDOM = function (ctx, obj, parent) {
 	}
 
 	//append to a parent if specified
-	if (parent) 
+	if (parent && parent != el) 
 		parent.appendChild(el);
 
 	if (ctx) {
 		//save a ref on the context
 		if (obj.id) ctx[obj.id] = el;
-
 
 		//if an input node, save to forms array
 		if (INPUT_NODE.indexOf(tag.toUpperCase()) !== -1) {
